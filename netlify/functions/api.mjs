@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto'
 
-export const config = { path: '/*', preferStatic: true }
-
 const ERROR_CODES = {
   MISSING_API_KEY: 'missing_api_key', INVALID_REQUEST: 'invalid_request',
   INSUFFICIENT_CREDITS: 'insufficient_credits', PROVIDER_UNAVAILABLE: 'provider_unavailable',
