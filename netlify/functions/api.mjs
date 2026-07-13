@@ -68,6 +68,14 @@ async function handler(event) {
       {id:'coding.review',name:'Review Code',credits:20},{id:'coding.write',name:'Write Code',credits:20},
     ],requestId:rid}) }
     if (path === '/v1/tera/pricing') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({pricing:PRICING,requestId:rid}) }
+    // Product namespace health/pricing
+    const nsMatch = path.match(/^\/v1\/(skills|searchlane|geolane|agent-browser|invoicelane)\/(health|pricing)$/)
+    if (nsMatch) {
+      const ns = nsMatch[1]
+      if (nsMatch[2] === 'health') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'ok',service:`${ns}-api`,version:'0.1.0',requestId:rid,proxied:true,timestamp:new Date().toISOString()}) }
+      const pricingMap = { skills:{'generate.github-profile':80,'generate.github-repo':100,'generate.docs':100,'generate.text':40,'export.cursor':10,'export.claude':10}, searchlane:{query:5,news:8,research:30}, geolane:{audit:40,compare:50}, 'agent-browser':{check:5,screenshot:8,evidence:10,extract:10,analyze:15}, invoicelane:{extract:20,validate:10} }
+      return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({pricing:pricingMap[ns]||{},requestId:rid}) }
+    }
     return { statusCode:404, headers:{'Content-Type':'application/json'}, body:JSON.stringify({error:{code:'not_found',message:'Not found',requestId:rid}}) }
   }
 
@@ -92,7 +100,44 @@ async function handler(event) {
   }
 
   const route = routes[path]
-  if (!route) return { statusCode:404, headers:{'Content-Type':'application/json'}, body:JSON.stringify(makeError(ERROR_CODES.INVALID_REQUEST,'Unknown: '+path,rid)) }
+  if (!route) {
+    // ── Product routes beyond Tera ──────────────────────────────
+    const prodRoutes = {
+      // Skills
+      'POST /v1/skills/generate/github-profile': { cr:80, exec: async d => { return { data: { status:'generated', skill: { name: (d.input||'custom-skill'), credits:80 }, message: 'Skills endpoint ready. AI backend not connected.' } } } },
+      'POST /v1/skills/export/cursor': { cr:10, exec: async d => { return { data: { status:'exported', format:'cursor', compatibleWith:['Cursor'] } } } },
+      'POST /v1/skills/export/claude': { cr:10, exec: async d => { return { data: { status:'exported', format:'claude', compatibleWith:['Claude Code'] } } } },
+      // SearchLane
+      'POST /v1/searchlane/query': { cr:5, exec: async d => { return { data: { results: [], query: d.query||'', status:'endpoint_defined', message: 'SearchLane query endpoint ready. Search provider not connected.' } } } },
+      'POST /v1/searchlane/news': { cr:8, exec: async d => { return { data: { results: [], query: d.query||'', status:'endpoint_defined' } } } },
+      'POST /v1/searchlane/research': { cr:30, exec: async d => { return { data: { results: [], topic: d.topic||'', status:'endpoint_defined' } } } },
+      // GeoLane
+      'POST /v1/geolane/audit': { cr:40, exec: async d => { return { data: { status:'endpoint_defined', url: d.url||'' } } } },
+      'POST /v1/geolane/compare': { cr:50, exec: async d => { return { data: { status:'endpoint_defined', urls: (d.urls||[]) } } } },
+      // Agent Browser
+      'POST /v1/agent-browser/check': { cr:5, exec: async d => { return { data: { status:'endpoint_defined', url: d.url||'' } } } },
+      'POST /v1/agent-browser/screenshot': { cr:8, exec: async d => { return { data: { status:'endpoint_defined', url: d.url||'' } } } },
+      'POST /v1/agent-browser/evidence': { cr:10, exec: async d => { return { data: { status:'endpoint_defined' } } } },
+      'POST /v1/agent-browser/extract': { cr:10, exec: async d => { return { data: { status:'endpoint_defined' } } } },
+      'POST /v1/agent-browser/analyze': { cr:15, exec: async d => { return { data: { status:'endpoint_defined' } } } },
+      // InvoiceLane
+      'POST /v1/invoicelane/extract': { cr:20, exec: async d => { return { data: { status:'endpoint_defined', message: 'InvoiceLane endpoint ready. Document extraction not connected.' } } } },
+      'POST /v1/invoicelane/validate': { cr:10, exec: async d => { return { data: { status:'endpoint_defined' } } } },
+      // MCP
+      'POST /mcp': { cr:0, exec: async d => { return { data: { mcp: { serverInfo:{name:'tera-api-mcp',version:'0.1.0'}, tools:[] }, message: 'MCP endpoint ready.' } } } },
+    }
+    const kr = `${method} ${path}`
+    const prodRoute = prodRoutes[kr]
+    if (prodRoute) {
+      try {
+        const r = await prodRoute.exec(data)
+        return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({ data: r.data, meta: { requestId:rid, credits:prodRoute.cr, action:'product_route' } }) }
+      } catch(err) {
+        return { statusCode:500, headers:{'Content-Type':'application/json'}, body:JSON.stringify(makeError(ERROR_CODES.PROVIDER_UNAVAILABLE,err.message,rid)) }
+      }
+    }
+    return { statusCode:404, headers:{'Content-Type':'application/json'}, body:JSON.stringify(makeError(ERROR_CODES.INVALID_REQUEST,'Unknown: '+path,rid)) }
+  }
 
   try {
     const r = await route.exec(data)
