@@ -79,6 +79,11 @@ async function handler(event) {
     return { statusCode:404, headers:{'Content-Type':'application/json'}, body:JSON.stringify({error:{code:'not_found',message:'Not found',requestId:rid}}) }
   }
 
+  // Telemetry ping (no auth required)
+  if (method === 'POST' && path === '/v1/telemetry/ping') {
+    return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'ok',requestId:rid}) }
+  }
+
   if (method !== 'POST') return { statusCode:404, headers:{'Content-Type':'application/json'}, body:JSON.stringify({error:{code:'not_found',message:'Not found'}}) }
 
   const apiKey = extractApiKey(headers)
