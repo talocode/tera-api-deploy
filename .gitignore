@@ -1,0 +1,6 @@
+# Local Netlify folder
+.netlify
+
+# Netlify functions build artifacts
+netlify/functions/api.zip
+netlify/functions/manifest.json
