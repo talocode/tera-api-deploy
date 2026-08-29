@@ -61,13 +61,13 @@ async function handler(event) {
 
   // GET routes
   if (method === 'GET') {
-    if (path === '/v1/tera/health' || path === '/health') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'ok',version:'0.1.0',requestId:rid}) }
-    if (path === '/v1/tera/capabilities') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({capabilities:[
+    if (path === '/v1/tera/health' || path === '/v1/health' || path === '/health') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'ok',version:'0.1.0',requestId:rid}) }
+    if (path === '/v1/tera/capabilities' || path === '/v1/capabilities') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({capabilities:[
       {id:'chat.completions',name:'Chat Completions',credits:3},{id:'writing.rewrite',name:'Rewrite Text',credits:5},
       {id:'writing.draft',name:'Draft Content',credits:10},{id:'coding.explain',name:'Explain Code',credits:10},
       {id:'coding.review',name:'Review Code',credits:20},{id:'coding.write',name:'Write Code',credits:20},
     ],requestId:rid}) }
-    if (path === '/v1/tera/pricing') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({pricing:PRICING,requestId:rid}) }
+    if (path === '/v1/tera/pricing' || path === '/v1/pricing') return { statusCode:200, headers:{'Content-Type':'application/json'}, body:JSON.stringify({pricing:PRICING,requestId:rid}) }
     // Product namespace health/pricing
     const nsMatch = path.match(/^\/v1\/(skills|searchlane|geolane|agent-browser|invoicelane)\/(health|pricing)$/)
     if (nsMatch) {
