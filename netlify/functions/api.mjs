@@ -48,7 +48,14 @@ async function callProviderChat(input) {
   if (!key) return { model: resolveModel(input.model), choices: [{ index:0, message:{role:'assistant',content:`Mock: ${(input.messages?.slice(-1)[0]?.content||'').slice(0,100)}...`}, finish_reason:'stop' }], usage: { prompt_tokens:10, completion_tokens:10, total_tokens:20 } };
   const r = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},
-    body: JSON.stringify({ model: resolveModel(input.model), messages: input.messages, max_tokens: input.max_tokens??2000, temperature: input.temperature??0.7 })
+    body: JSON.stringify({
+      model: resolveModel(input.model),
+      messages: input.messages,
+      max_tokens: input.max_tokens??2000,
+      temperature: input.temperature??0.7,
+      top_p: input.top_p??0.9,
+      response_format: input.response_format ?? undefined,
+    })
   });
   if (!r.ok) throw new Error(`Provider ${r.status}`);
   const d = await r.json();
