@@ -32,12 +32,23 @@ async function callProvider(system, user) {
   throw new Error('Empty response');
 }
 
+const MODEL_MAP = {
+  'default': 'mistral-small-latest',
+  'mistral-small-latest': 'mistral-small-latest',
+  'mistral-large-latest': 'mistral-large-latest',
+  'codestral-latest': 'codestral-latest',
+  'codestral': 'codestral-latest',
+};
+function resolveModel(inputModel) {
+  const requested = inputModel && inputModel !== 'default' ? inputModel : (process.env.TERA_API_MODEL || 'mistral-small-latest');
+  return MODEL_MAP[requested] || requested;
+}
 async function callProviderChat(input) {
   const key = process.env.MISTRAL_API_KEY;
-  if (!key) return { model: input.model, choices: [{ index:0, message:{role:'assistant',content:`Mock: ${(input.messages?.slice(-1)[0]?.content||'').slice(0,100)}...`}, finish_reason:'stop' }], usage: { prompt_tokens:10, completion_tokens:10, total_tokens:20 } };
+  if (!key) return { model: resolveModel(input.model), choices: [{ index:0, message:{role:'assistant',content:`Mock: ${(input.messages?.slice(-1)[0]?.content||'').slice(0,100)}...`}, finish_reason:'stop' }], usage: { prompt_tokens:10, completion_tokens:10, total_tokens:20 } };
   const r = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},
-    body: JSON.stringify({ model: input.model||process.env.TERA_API_MODEL||'mistral-small-latest', messages: input.messages, max_tokens: input.max_tokens??2000, temperature: input.temperature??0.7 })
+    body: JSON.stringify({ model: resolveModel(input.model), messages: input.messages, max_tokens: input.max_tokens??2000, temperature: input.temperature??0.7 })
   });
   if (!r.ok) throw new Error(`Provider ${r.status}`);
   const d = await r.json();
